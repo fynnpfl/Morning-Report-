@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Morningreporter</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f0f13; color: #e8e8ee; min-height: 100vh; padding: 20px; }
+  h1 { font-size: 1.3rem; font-weight: 700; color: #fff; margin-bottom: 4px; }
+  .subtitle { font-size: 0.8rem; color: #888; margin-bottom: 24px; }
+  .card { background: #1a1a22; border: 1px solid #2a2a36; border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+  .card-title { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #888; margin-bottom: 12px; }
+  label { display: block; font-size: 0.82rem; color: #aaa; margin-bottom: 6px; margin-top: 12px; }
+  label:first-of-type { margin-top: 0; }
+  input, textarea, select { width: 100%; background: #0f0f13; border: 1px solid #2a2a36; border-radius: 8px; padding: 10px 12px; color: #e8e8ee; font-size: 0.85rem; outline: none; transition: border-color 0.2s; }
+  input:focus, textarea:focus { border-color: #5fa8d3; }
+  textarea { resize: vertical; font-family: inherit; }
+  .row { display: flex; gap: 12px; }
+  .row input { flex: 1; }
+  .toggle-row { display: flex; gap: 10px; }
+  .toggle-btn { flex: 1; padding: 9px; border-radius: 8px; border: 1px solid #2a2a36; background: #0f0f13; color: #888; font-size: 0.82rem; cursor: pointer; transition: all 0.2s; text-align: center; }
+  .toggle-btn.active { background: #1a3a5c; border-color: #5fa8d3; color: #5fa8d3; font-weight: 600; }
+  .section-toggles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .section-toggle { padding: 8px 10px; border-radius: 8px; border: 1px solid #2a2a36; background: #0f0f13; color: #888; font-size: 0.78rem; cursor: pointer; transition: all 0.2s; text-align: center; }
+  .section-toggle.active { background: #1e3a2f; border-color: #2ecc71; color: #2ecc71; }
+  .btn { width: 100%; padding: 13px; border-radius: 10px; border: none; background: #1a3a5c; color: #fff; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s; margin-top: 4px; border: 1px solid #5fa8d3; }
+  .btn:hover:not(:disabled) { opacity: 0.85; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-secondary { background: #2a2a36; color: #e8e8ee; border: 1px solid #3a3a48; margin-top: 8px; }
+  .status { font-size: 0.8rem; text-align: center; margin-top: 12px; min-height: 20px; color: #888; }
+  .status.ok { color: #2ecc71; }
+  .status.err { color: #e74c3c; }
+  .status.loading { color: #f39c12; }
+  .report-output { margin-top: 16px; display: none; }
+  .report-output.visible { display: block; }
+  .report-section { background: #0f0f13; border: 1px solid #2a2a36; border-radius: 10px; padding: 16px; margin-bottom: 12px; }
+  .report-section h2 { font-size: 0.85rem; font-weight: 700; color: #5fa8d3; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #2a2a36; }
+  .report-section .content { font-size: 0.85rem; line-height: 1.75; color: #d0d0da; white-space: pre-wrap; word-break: break-word; }
+  .report-header { background: #1a2a3a; border: 1px solid #2a4a6a; border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; }
+  .report-header .date { font-size: 0.75rem; color: #5fa8d3; font-weight: 600; letter-spacing: 0.05em; }
+  .report-header .title { font-size: 1.1rem; font-weight: 700; color: #fff; margin-top: 2px; }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #444; border-top-color: #5fa8d3; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .market-row { display: flex; gap: 12px; margin-bottom: 12px; }
+  .market-pill { flex: 1; background: #1a1a22; border: 1px solid #2a2a36; border-radius: 8px; padding: 10px 12px; }
+  .market-pill .label { font-size: 0.7rem; color: #666; margin-bottom: 3px; }
+  .market-pill .value { font-size: 0.95rem; font-weight: 700; color: #e8e8ee; }
+  .market-pill .change { font-size: 0.75rem; margin-top: 2px; }
+  .change.pos { color: #2ecc71; }
+  .change.neg { color: #e74c3c; }
+  .change.neu { color: #888; }
+  details summary { cursor: pointer; font-size: 0.78rem; color: #666; margin-top: 10px; user-select: none; }
+  details summary:hover { color: #aaa; }
+  details .inner { margin-top: 10px; }
+  .wetter-row { display: flex; gap: 10px; margin-bottom: 4px; }
+  .wetter-pill { flex: 1; background: #0f0f13; border: 1px solid #2a2a36; border-radius: 8px; padding: 10px 12px; font-size: 0.82rem; }
+  .wetter-pill .city { font-size: 0.7rem; color: #5fa8d3; font-weight: 600; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+
+<h1>Morningreporter</h1>
+<p class="subtitle">Dein täglicher Briefing – direkt hier in Claude</p>
+
+<div class="card">
+  <div class="card-title">Einstellungen</div>
+  <label>Report-Typ</label>
+  <div class="toggle-row">
+    <div class="toggle-btn active" id="btn-morning" onclick="setType('morning')">Morgenreport 06:45</div>
+    <div class="toggle-btn" id="btn-evening" onclick="setType('evening')">Abendreport 20:00</div>
+  </div>
+
+  <label style="margin-top:16px;">Standorte (Wetter – nur morgens)</label>
+  <div class="row">
+    <input type="text" id="loc1" value="Falkensee" />
+    <input type="text" id="loc2" value="Berlin" />
+  </div>
+
+  <label style="margin-top:16px;">Sektionen</label>
+  <div class="section-toggles">
+    <div class="section-toggle active" id="sec-wetter" onclick="toggleSection('wetter')">Wetter</div>
+    <div class="section-toggle active" id="sec-politik" onclick="toggleSection('politik')">Politik</div>
+    <div class="section-toggle active" id="sec-wirtschaft" onclick="toggleSection('wirtschaft')">Wirtschaft</div>
+    <div class="section-toggle active" id="sec-sicherheit" onclick="toggleSection('sicherheit')">Sicherheit & BW</div>
+  </div>
+
+  <details>
+    <summary>RSS-Feeds anpassen (optional)</summary>
+    <div class="inner">
+      <label>Politik Deutschland</label>
+      <textarea id="feeds-de" rows="4">https://www.tagesschau.de/xml/rss2_politik/
+https://www.spiegel.de/politik/index.rss
+https://newsfeed.zeit.de/politik/index
+https://www.faz.net/rss/aktuell/politik/
+https://www.welt.de/politik/feeds/section.rss
+https://www.nzz.ch/feeds/deutschland.rss</textarea>
+
+      <label>Politik EU / USA / Welt</label>
+      <textarea id="feeds-eu" rows="4">https://www.tagesschau.de/xml/rss2_ausland/
+https://www.spiegel.de/ausland/index.rss
+https://www.welt.de/politik/ausland/feeds/section.rss
+https://www.nzz.ch/feeds/international.rss
+https://rss.dw.com/xml/rss-de-all</textarea>
+
+      <label>Wirtschaft</label>
+      <textarea id="feeds-wirt" rows="4">https://www.tagesschau.de/xml/rss2_wirtschaft/
+https://www.spiegel.de/wirtschaft/index.rss
+https://www.welt.de/wirtschaft/feeds/section.rss
+https://www.nzz.ch/feeds/wirtschaft.rss
+https://www.handelsblatt.com/contentexport/feed/schlagzeilen</textarea>
+
+      <label>Sicherheit / Bundeswehr / Rüstung</label>
+      <textarea id="feeds-sic" rows="4">https://www.tagesschau.de/xml/rss2/
+https://www.bundeswehr.de/de/aktuelles.rss
+https://www.spiegel.de/politik/index.rss
+https://www.welt.de/politik/feeds/section.rss</textarea>
+    </div>
+  </details>
+</div>
+
+<div class="card">
+  <div class="card-title">Report abrufen</div>
+  <button class="btn" id="genBtn" onclick="runReport()">Report jetzt generieren</button>
+  <div class="status" id="genStatus"></div>
+</div>
+
+<div class="report-output" id="reportOutput"></div>
+
+<script>
+let reportType = 'morning';
+let activeSections = { wetter: true, politik: true, wirtschaft: true, sicherheit: true };
+
+function setType(t) {
+  reportType = t;
+  document.getElementById('btn-morning').classList.toggle('active', t === 'morning');
+  document.getElementById('btn-evening').classList.toggle('active', t === 'evening');
+}
+
+function toggleSection(s) {
+  activeSections[s] = !activeSections[s];
+  document.getElementById('sec-' + s).classList.toggle('active', activeSections[s]);
+}
+
+function getFeeds() {
+  return {
+    de: document.getElementById('feeds-de').value.trim().split('\n').filter(Boolean),
+    eu: document.getElementById('feeds-eu').value.trim().split('\n').filter(Boolean),
+    wirt: document.getElementById('feeds-wirt').value.trim().split('\n').filter(Boolean),
+    sic: document.getElementById('feeds-sic').value.trim().split('\n').filter(Boolean),
+  };
+}
+
+async function fetchRss(url) {
+  try {
+    const r = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}&count=12`);
+    const d = await r.json();
+    if (d.status !== 'ok') return [];
+    return d.items.map(i => ({
+      title: (i.title || '').trim(),
+      link: i.link || '',
+      pubDate: i.pubDate || '',
+      description: (i.description || '').replace(/<[^>]+>/g, '').slice(0, 250),
+      source: d.feed?.title || url
+    }));
+  } catch { return []; }
+}
+
+async function fetchAll(urls) {
+  const results = await Promise.all(urls.map(fetchRss));
+  const all = results.flat();
+  const seen = new Set();
+  return all.filter(a => {
+    if (!a.title || seen.has(a.title)) return false;
+    seen.add(a.title); return true;
+  });
+}
+
+async function getWeather(city) {
+  try {
+    const geo = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=de`);
+    const gd = await geo.json();
+    if (!gd.results?.length) return { city, text: 'Nicht gefunden', raw: null };
+    const { latitude: lat, longitude: lon } = gd.results[0];
+    const wr = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,weathercode,windspeed_10m,precipitation&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weathercode&timezone=Europe/Berlin&forecast_days=1`);
+    const wd = await wr.json();
+    const c = wd.current; const d = wd.daily;
+    const codes = {0:'Sonnig',1:'Meist klar',2:'Teilweise bewölkt',3:'Bedeckt',45:'Nebel',48:'Reifnebel',51:'Nieselregen',61:'Leichter Regen',63:'Regen',65:'Starker Regen',71:'Leichter Schnee',73:'Schnee',75:'Starker Schnee',80:'Schauer',81:'Schauer',82:'Starke Schauer',95:'Gewitter',96:'Gewitter m. Hagel'};
+    const desc = codes[c.weathercode] || 'Unbekannt';
+    return {
+      city,
+      desc,
+      temp: c.temperature_2m,
+      feels: c.apparent_temperature,
+      wind: c.windspeed_10m,
+      min: d.temperature_2m_min[0],
+      max: d.temperature_2m_max[0],
+      precip: d.precipitation_sum[0],
+      text: `${desc} · ${c.temperature_2m}°C (fühlt ${c.apparent_temperature}°C) · Wind ${c.windspeed_10m} km/h · ${d.temperature_2m_min[0]}°–${d.temperature_2m_max[0]}°C · Niederschlag ${d.precipitation_sum[0]} mm`
+    };
+  } catch(e) { return { city, text: 'Fehler: ' + e.message, raw: null }; }
+}
+
+async function getBtc() {
+  try {
+    const r = await fetch('https://api.coindesk.com/v1/bpi/currentprice/EUR.json');
+    const d = await r.json();
+    const price = parseFloat(d.bpi.EUR.rate.replace(/,/g,''));
+    return { price, formatted: price.toLocaleString('de-DE', {minimumFractionDigits:0, maximumFractionDigits:0}) + ' €' };
+  } catch { return { price: null, formatted: 'n/v' }; }
+}
+
+async function getMsci() {
+  try {
+    const r = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/IWDA.DE?interval=1d&range=5d', { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    const d = await r.json();
+    const closes = d.chart.result[0].indicators.quote[0].close.filter(Boolean);
+    const cur = closes[closes.length-1]; const prev = closes[closes.length-2] || cur;
+    const chg = cur - prev; const pct = (chg/prev)*100;
+    const sign = chg >= 0 ? '+' : '';
+    return { price: cur, prev, chg, pct, formatted: cur.toFixed(2) + ' €', changeFormatted: `${sign}${chg.toFixed(2)} € (${sign}${pct.toFixed(2)}%)`, positive: chg >= 0 };
+  } catch { return { price: null, formatted: 'n/v', changeFormatted: '', positive: null }; }
+}
+
+function buildPrompt(ctx) {
+  const isMorning = reportType === 'morning';
+  const now = new Date().toLocaleString('de-DE', { timeZone: 'Europe/Berlin', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+  let p = `Du bist ein persönlicher Nachrichtenassistent mit sachlich-konservativer Perspektive. Erstelle einen ${isMorning ? 'Morgenreport' : 'Abendreport'} für ${now}.
+
+Inhaltliche Ausrichtung:
+- Sachlich, präzise, keine aktivistische Sprache
+- Leicht konservativ-bürgerliche Perspektive (NZZ, FAZ, Welt als Referenz)
+- Fakten und Konsequenzen in den Vordergrund, kein Framing
+- Bei Sicherheit und Wirtschaft besonders nüchtern und faktenbasiert
+- Wichtige Meldungen klar priorisieren, unwichtige weglassen
+
+Formatierung – gib den Report in klar getrennten JSON-Sektionen zurück, damit ich ihn sauber rendern kann:
+Antworte NUR mit validem JSON in dieser Struktur, kein Text davor oder danach:
+{
+  "sektionen": [
+    { "id": "wetter", "titel": "Wetter", "inhalt": "..." },
+    { "id": "politik_de", "titel": "Politik Deutschland", "inhalt": "..." },
+    { "id": "politik_welt", "titel": "Politik EU / USA / Welt", "inhalt": "..." },
+    { "id": "wirtschaft", "titel": "Wirtschaft", "inhalt": "..." },
+    { "id": "sicherheit", "titel": "Sicherheit & Bundeswehr", "inhalt": "..." }
+  ]
+}
+
+Im "inhalt"-Feld: Fließtext mit Zeilenumbrüchen (\\n). Pro Meldung: Titel fett (mit **), dann 1–2 Sätze Einordnung, dann Quellenangabe in Klammern. Keine Bullet-Punkte, keine Markdown-Header.
+
+Jetzt die Rohdaten:
+`;
+
+  if (ctx.wetter && activeSections.wetter && isMorning) {
+    p += `\nWETTER:\n`;
+    ctx.wetter.forEach(w => { p += `${w.city}: ${w.text}\n`; });
+  }
+
+  if (ctx.politik_de && activeSections.politik) {
+    p += `\nPOLITIK DEUTSCHLAND – wähle 4–6 wichtigste, ausführlicher einordnen:\n`;
+    ctx.politik_de.slice(0,18).forEach(a => { p += `- "${a.title}" (${a.source}) ${a.link}\n`; });
+  }
+
+  if (ctx.politik_eu && activeSections.politik) {
+    p += `\nPOLITIK EU / USA / WELT – NUR wirklich brisante Meldungen, max 3–4. Unwichtiges weglassen:\n`;
+    ctx.politik_eu.slice(0,15).forEach(a => { p += `- "${a.title}" (${a.source}) ${a.link}\n`; });
+  }
+
+  if (activeSections.wirtschaft) {
+    if (ctx.msci) p += `\nMSCI World IWDA aktuell: ${ctx.msci.formatted} | Veränderung heute: ${ctx.msci.changeFormatted}\n`;
+    if (ctx.btc) p += `Bitcoin EUR: ${ctx.btc.formatted}\n`;
+    if (ctx.wirtschaft) {
+      p += `\nWIRTSCHAFT – Rüstungsindustrie (Rheinmetall, Hensoldt, KNDS etc.) separat hervorheben. Dann 3–4 große allg. Wirtschaftsnews:\n`;
+      ctx.wirtschaft.slice(0,18).forEach(a => { p += `- "${a.title}" (${a.source}) ${a.link}\n`; });
+    }
+  }
+
+  if (ctx.sicherheit && activeSections.sicherheit) {
+    p += `\nSICHERHEIT & BUNDESWEHR – Filter strikt auf: Bundeswehr, Rüstungsfirmen, innere Sicherheit D, Sicherheitslage, Polizei/BND/Verfassungsschutz, NATO. Irrelevantes weglassen. 4–6 Meldungen:\n`;
+    ctx.sicherheit.slice(0,18).forEach(a => { p += `- "${a.title}" (${a.source}) ${a.link}\n`; });
+  }
+
+  return p;
+}
+
+function renderWetter(wetterData, isMorning) {
+  if (!isMorning || !wetterData || !activeSections.wetter) return '';
+  const html = wetterData.map(w => `
+    <div class="wetter-pill">
+      <div class="city">${w.city.toUpperCase()}</div>
+      <div>${w.desc || ''} · <strong>${w.temp !== undefined ? w.temp : ''}°C</strong> (fühlt ${w.feels !== undefined ? w.feels : ''}°C)</div>
+      <div style="font-size:0.75rem;color:#888;margin-top:3px;">${w.min !== undefined ? w.min : ''}°–${w.max !== undefined ? w.max : ''}° · Wind ${w.wind !== undefined ? w.wind : ''} km/h · Niederschlag ${w.precip !== undefined ? w.precip : ''} mm</div>
+    </div>
+  `).join('');
+  return `<div class="wetter-row">${html}</div>`;
+}
+
+function renderMarkt(msci, btc) {
+  if (!activeSections.wirtschaft) return '';
+  const msciChange = msci?.positive === true ? 'pos' : msci?.positive === false ? 'neg' : 'neu';
+  return `
+    <div class="market-row">
+      <div class="market-pill">
+        <div class="label">MSCI World IWDA</div>
+        <div class="value">${msci?.formatted || 'n/v'}</div>
+        <div class="change ${msciChange}">${msci?.changeFormatted || ''}</div>
+      </div>
+      <div class="market-pill">
+        <div class="label">Bitcoin EUR</div>
+        <div class="value">${btc?.formatted || 'n/v'}</div>
+        <div class="change neu">Live-Kurs</div>
+      </div>
+    </div>
+  `;
+}
+
+async function runReport() {
+  const btn = document.getElementById('genBtn');
+  const status = document.getElementById('genStatus');
+  const output = document.getElementById('reportOutput');
+  btn.disabled = true;
+  output.classList.remove('visible');
+  output.innerHTML = '';
+
+  const isMorning = reportType === 'morning';
+  const loc1 = document.getElementById('loc1').value || 'Falkensee';
+  const loc2 = document.getElementById('loc2').value || 'Berlin';
+  const feeds = getFeeds();
+
+  const steps = [
+    'Lade Wetterdaten...',
+    'Lade Nachrichtenfeeds...',
+    'Lade Marktdaten...',
+    'Claude wertet aus...'
+  ];
+
+  let stepIdx = 0;
+  const stepInterval = setInterval(() => {
+    if (stepIdx < steps.length) {
+      status.innerHTML = `<span class="spinner"></span>${steps[stepIdx++]}`;
+      status.className = 'status loading';
+    }
+  }, 1800);
+
+  try {
+    const [wetter, politik_de, politik_eu, wirtschaft, sicherheit, btc, msci] = await Promise.all([
+      isMorning && activeSections.wetter ? Promise.all([getWeather(loc1), getWeather(loc2)]) : Promise.resolve(null),
+      activeSections.politik ? fetchAll(feeds.de) : Promise.resolve([]),
+      activeSections.politik ? fetchAll(feeds.eu) : Promise.resolve([]),
+      activeSections.wirtschaft ? fetchAll(feeds.wirt) : Promise.resolve([]),
+      activeSections.sicherheit ? fetchAll(feeds.sic) : Promise.resolve([]),
+      getBtc(),
+      getMsci()
+    ]);
+
+    const ctx = { wetter, politik_de, politik_eu, wirtschaft, sicherheit, btc, msci };
+    const prompt = buildPrompt(ctx);
+
+    const apiResponse = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const apiData = await apiResponse.json();
+    if (!apiResponse.ok) throw new Error(apiData.error?.message || 'API-Fehler');
+
+    const rawText = apiData.content[0].text;
+    let parsed;
+    try {
+      const clean = rawText.replace(/```json|```/g, '').trim();
+      parsed = JSON.parse(clean);
+    } catch {
+      parsed = { sektionen: [{ id: 'raw', titel: 'Report', inhalt: rawText }] };
+    }
+
+    clearInterval(stepInterval);
+
+    const now = new Date().toLocaleString('de-DE', { timeZone: 'Europe/Berlin', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const reportLabel = isMorning ? 'Morgenreport' : 'Abendreport';
+
+    let html = `
+      <div class="report-header">
+        <div class="date">${now} Uhr</div>
+        <div class="title">${reportLabel}</div>
+      </div>
+    `;
+
+    // Wetter und Markt separat rendern
+    if (isMorning && wetter && activeSections.wetter) {
+      html += `<div class="report-section"><h2>Wetter</h2>${renderWetter(wetter, isMorning)}</div>`;
+    }
+
+    if (activeSections.wirtschaft) {
+      const markt = renderMarkt(msci, btc);
+      if (markt) {
+        // Markt-Pills in den Wirtschaftsblock einbauen
+      }
+    }
+
+    parsed.sektionen.forEach(sek => {
+      if (sek.id === 'wetter') return; // bereits gerendert
+      let extraHtml = '';
+      if (sek.id === 'wirtschaft') {
+        extraHtml = renderMarkt(msci, btc);
+      }
+      const content = (sek.inhalt || '').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      html += `
+        <div class="report-section">
+          <h2>${sek.titel}</h2>
+          ${extraHtml}
+          <div class="content">${content}</div>
+        </div>
+      `;
+    });
+
+    output.innerHTML = html;
+    output.classList.add('visible');
+    status.textContent = 'Report geladen.';
+    status.className = 'status ok';
+
+  } catch(e) {
+    clearInterval(stepInterval);
+    status.textContent = 'Fehler: ' + e.message;
+    status.className = 'status err';
+  }
+
+  btn.disabled = false;
+}
+</script>
+</body>
+</html>
